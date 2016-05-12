@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkg/errors"
 	"github.com/pmezard/go-difflib/difflib"
 )
 
@@ -836,7 +837,23 @@ func NoError(t TestingT, err error, msgAndArgs ...interface{}) bool {
 		return true
 	}
 
-	return Fail(t, fmt.Sprintf("Received unexpected error %q", err), msgAndArgs...)
+	return Fail(t, "Received unexpected error: "+errorAndCause(err), msgAndArgs...)
+}
+
+func errorAndCause(err error) string {
+	type causer interface {
+		Cause() error
+	}
+
+	_, ok := err.(causer)
+	if !ok {
+		return err.Error()
+	}
+
+	msg := &bytes.Buffer{}
+	errors.Fprint(msg, err)
+
+	return msg.String()
 }
 
 // Error asserts that a function returned an error (i.e. not `nil`).
